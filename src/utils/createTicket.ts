@@ -47,6 +47,16 @@ export async function createTicketChannel(params: {
 
   const config = await getGuildConfig(guild.id);
 
+  // Validate category ID is actually a category
+  let parentId: string | undefined;
+  if (config.ticketCategoryId) {
+    const cat = await guild.channels.fetch(config.ticketCategoryId).catch(() => null);
+    if (cat && cat.type === ChannelType.GuildCategory) {
+      parentId = cat.id;
+    }
+    // If it's not a category, silently skip — don't crash ticket creation
+  }
+
   // Build safe channel name
   const safeName = `${type}-${member.user.username}`
     .toLowerCase()
@@ -95,9 +105,7 @@ export async function createTicketChannel(params: {
     type: ChannelType.GuildText,
     topic: `owner:${member.id};type:${type}`,
     permissionOverwrites,
-    ...(config.ticketCategoryId
-      ? { parent: config.ticketCategoryId }
-      : {}),
+    ...(parentId ? { parent: parentId } : {}),
   });
 
   // Build summary embed
